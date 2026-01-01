@@ -1,16 +1,36 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { AppProps } from '@zos-apps/config';
+import { useLocalStorage } from '@zos-apps/config';
 import { useDesktopSettings } from '@z-os/core';
 import {
   Wifi, Bluetooth, Palette, Monitor, Bell, Lock, Users, Keyboard,
   Mouse, Accessibility, Clock, Battery, Globe, ChevronRight, Check,
-  Volume2, Moon, Sun, Laptop, WifiOff, BluetoothOff, User, Camera,
-  Fingerprint, Shield, Eye, EyeOff, HardDrive, Cloud, Download,
-  Trash2, RefreshCw, Info, ExternalLink, Zap, Gauge
+  Volume2, Moon, Sun, Laptop, User, Camera,
+  Fingerprint, Shield, HardDrive,
+  Trash2, Zap
 } from 'lucide-react';
 import { cn } from '@z-os/ui';
 
-interface SettingsProps {
-  onClose: () => void;}
+interface SettingsState {
+  wifiEnabled: boolean;
+  bluetoothEnabled: boolean;
+  notificationsEnabled: boolean;
+  doNotDisturb: boolean;
+  volume: number;
+  brightness: number;
+  nightShift: boolean;
+  autoLock: string;
+  keyRepeatSpeed: number;
+  trackpadSpeed: number;
+  tapToClick: boolean;
+  naturalScrolling: boolean;
+  reduceMotion: boolean;
+  increaseContrast: boolean;
+  is24Hour: boolean;
+  autoTimezone: boolean;
+  lowPowerMode: boolean;
+  optimizedCharging: boolean;
+}
 
 // Toggle switch component
 const Toggle: React.FC<{ enabled: boolean; onChange: (v: boolean) => void; disabled?: boolean }> = ({
@@ -69,29 +89,43 @@ const SettingRow: React.FC<{
   </div>
 );
 
-const Settings: React.FC<SettingsProps> = ({ onClose }) => {
+const Settings: React.FC<AppProps> = ({ onClose: _onClose }) => {
   const [activeSection, setActiveSection] = useState('general');
   const { theme, setTheme } = useDesktopSettings();
 
-  // Local state for settings
-  const [wifiEnabled, setWifiEnabled] = useState(true);
-  const [bluetoothEnabled, setBluetoothEnabled] = useState(true);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [doNotDisturb, setDoNotDisturb] = useState(false);
-  const [volume, setVolume] = useState(75);
-  const [brightness, setBrightness] = useState(80);
-  const [nightShift, setNightShift] = useState(false);
-  const [autoLock, setAutoLock] = useState('5');
-  const [keyRepeatSpeed, setKeyRepeatSpeed] = useState(70);
-  const [trackpadSpeed, setTrackpadSpeed] = useState(50);
-  const [tapToClick, setTapToClick] = useState(true);
-  const [naturalScrolling, setNaturalScrolling] = useState(true);
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const [increaseContrast, setIncreaseContrast] = useState(false);
-  const [is24Hour, setIs24Hour] = useState(true);
-  const [autoTimezone, setAutoTimezone] = useState(true);
-  const [lowPowerMode, setLowPowerMode] = useState(false);
-  const [optimizedCharging, setOptimizedCharging] = useState(true);
+  // Persisted settings state
+  const [settings, setSettings] = useLocalStorage<SettingsState>('system-settings', {
+    wifiEnabled: true,
+    bluetoothEnabled: true,
+    notificationsEnabled: true,
+    doNotDisturb: false,
+    volume: 75,
+    brightness: 80,
+    nightShift: false,
+    autoLock: '5',
+    keyRepeatSpeed: 70,
+    trackpadSpeed: 50,
+    tapToClick: true,
+    naturalScrolling: true,
+    reduceMotion: false,
+    increaseContrast: false,
+    is24Hour: true,
+    autoTimezone: true,
+    lowPowerMode: false,
+    optimizedCharging: true,
+  });
+
+  // Helper to update individual settings
+  const updateSetting = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const {
+    wifiEnabled, bluetoothEnabled, notificationsEnabled, doNotDisturb,
+    volume, nightShift, keyRepeatSpeed, trackpadSpeed, tapToClick,
+    naturalScrolling, reduceMotion, increaseContrast, is24Hour,
+    autoTimezone, lowPowerMode, optimizedCharging,
+  } = settings;
 
   const sections = [
     { id: 'general', label: 'General', icon: Monitor },
@@ -232,7 +266,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
 
             {/* Night Shift */}
             <SettingRow label="Night Shift" description="Reduces blue light after sunset">
-              <Toggle enabled={nightShift} onChange={setNightShift} />
+              <Toggle enabled={nightShift} onChange={(v) => updateSetting('nightShift', v)} />
             </SettingRow>
           </div>
         );
@@ -242,7 +276,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-white">Wi-Fi</h2>
             <SettingRow label="Wi-Fi" description={wifiEnabled ? "Connected to Home Network" : "Off"}>
-              <Toggle enabled={wifiEnabled} onChange={setWifiEnabled} />
+              <Toggle enabled={wifiEnabled} onChange={(v) => updateSetting('wifiEnabled', v)} />
             </SettingRow>
 
             {wifiEnabled && (
@@ -278,7 +312,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-white">Bluetooth</h2>
             <SettingRow label="Bluetooth" description={bluetoothEnabled ? "On" : "Off"}>
-              <Toggle enabled={bluetoothEnabled} onChange={setBluetoothEnabled} />
+              <Toggle enabled={bluetoothEnabled} onChange={(v) => updateSetting('bluetoothEnabled', v)} />
             </SettingRow>
 
             {bluetoothEnabled && (
@@ -318,10 +352,10 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-white">Notifications</h2>
             <SettingRow label="Allow Notifications" description="Show notifications on the desktop">
-              <Toggle enabled={notificationsEnabled} onChange={setNotificationsEnabled} />
+              <Toggle enabled={notificationsEnabled} onChange={(v) => updateSetting('notificationsEnabled', v)} />
             </SettingRow>
             <SettingRow label="Do Not Disturb" description="Silence all notifications">
-              <Toggle enabled={doNotDisturb} onChange={setDoNotDisturb} />
+              <Toggle enabled={doNotDisturb} onChange={(v) => updateSetting('doNotDisturb', v)} />
             </SettingRow>
 
             <div>
@@ -350,7 +384,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
               </div>
               <div className="flex items-center gap-3">
                 <Volume2 className="w-4 h-4 text-white/50" />
-                <Slider value={volume} onChange={setVolume} />
+                <Slider value={volume} onChange={(v) => updateSetting('volume', v)} />
               </div>
             </div>
 
@@ -460,7 +494,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-white/50">Slow</span>
-                <Slider value={keyRepeatSpeed} onChange={setKeyRepeatSpeed} />
+                <Slider value={keyRepeatSpeed} onChange={(v) => updateSetting('keyRepeatSpeed', v)} />
                 <span className="text-xs text-white/50">Fast</span>
               </div>
             </div>
@@ -495,17 +529,17 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-white/50">Slow</span>
-                <Slider value={trackpadSpeed} onChange={setTrackpadSpeed} />
+                <Slider value={trackpadSpeed} onChange={(v) => updateSetting('trackpadSpeed', v)} />
                 <span className="text-xs text-white/50">Fast</span>
               </div>
             </div>
 
             <SettingRow label="Tap to Click" description="Tap with one finger to click">
-              <Toggle enabled={tapToClick} onChange={setTapToClick} />
+              <Toggle enabled={tapToClick} onChange={(v) => updateSetting('tapToClick', v)} />
             </SettingRow>
 
             <SettingRow label="Natural Scrolling" description="Content tracks finger movement">
-              <Toggle enabled={naturalScrolling} onChange={setNaturalScrolling} />
+              <Toggle enabled={naturalScrolling} onChange={(v) => updateSetting('naturalScrolling', v)} />
             </SettingRow>
 
             <SettingRow label="Force Click and haptic feedback" description="Click then press firmly for more options">
@@ -533,7 +567,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
                   <Toggle enabled={false} onChange={() => {}} />
                 </SettingRow>
                 <SettingRow label="Increase Contrast" description="Reduce transparency">
-                  <Toggle enabled={increaseContrast} onChange={setIncreaseContrast} />
+                  <Toggle enabled={increaseContrast} onChange={(v) => updateSetting('increaseContrast', v)} />
                 </SettingRow>
               </div>
             </div>
@@ -541,7 +575,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             <div>
               <h3 className="text-white/70 text-sm mb-2">Motor</h3>
               <SettingRow label="Reduce Motion" description="Minimize interface animations">
-                <Toggle enabled={reduceMotion} onChange={setReduceMotion} />
+                <Toggle enabled={reduceMotion} onChange={(v) => updateSetting('reduceMotion', v)} />
               </SettingRow>
             </div>
 
@@ -573,11 +607,11 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             </SettingRow>
 
             <SettingRow label="Set time zone automatically" description="Using current location">
-              <Toggle enabled={autoTimezone} onChange={setAutoTimezone} />
+              <Toggle enabled={autoTimezone} onChange={(v) => updateSetting('autoTimezone', v)} />
             </SettingRow>
 
             <SettingRow label="24-hour time" description="Use 24-hour clock format">
-              <Toggle enabled={is24Hour} onChange={setIs24Hour} />
+              <Toggle enabled={is24Hour} onChange={(v) => updateSetting('is24Hour', v)} />
             </SettingRow>
 
             <SettingRow label="Show date in menu bar" description="Display date next to time">
@@ -608,11 +642,11 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             </div>
 
             <SettingRow label="Low Power Mode" description="Reduces energy usage">
-              <Toggle enabled={lowPowerMode} onChange={setLowPowerMode} />
+              <Toggle enabled={lowPowerMode} onChange={(v) => updateSetting('lowPowerMode', v)} />
             </SettingRow>
 
             <SettingRow label="Optimized Battery Charging" description="Reduces battery aging">
-              <Toggle enabled={optimizedCharging} onChange={setOptimizedCharging} />
+              <Toggle enabled={optimizedCharging} onChange={(v) => updateSetting('optimizedCharging', v)} />
             </SettingRow>
 
             <SettingRow label="Show battery percentage" description="In menu bar">
